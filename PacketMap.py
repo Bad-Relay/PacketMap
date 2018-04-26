@@ -7,18 +7,29 @@ from ctypes import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
-from PIL import ImageTk,Image
-#computer host
+import time
+#from PIL import ImageTk,Image
+
+# GUI host
 root = Tk()
 
-#Defult Ip
-host = "192.168.99.110"
+# Defult Ip
+host = socket.gethostbyname(socket.gethostname())
+host = str(host)
 
-#Name of OpenGL
+# Name of OpenGL
 name = 'Packet Map'
 
-img = ImageTk.PhotoImage(Image.open("windows.png"))
-canvas = Canvas(root, width=50, height=50)
+# Set Var For Packet
+packet = StringVar()
+
+#img = ImageTk.PhotoImage(Image.open("windows.png"))
+#canvas = Canvas(root, width=50, height=50)
+
+# Cap Drop down box
+
+optVar = StringVar(root)
+
 #Ip header table
 class IP(Structure):
     _fields_ = [
@@ -58,6 +69,7 @@ class IP(Structure):
 
 def capture_packet():
 
+    #IP var from text box
     host = e.get()
 
     #make a new socket
@@ -77,26 +89,35 @@ def capture_packet():
     if os.name == "nt":
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
 
-    #set var for gui
-    packet = StringVar()
+
     raw_buffer = sniffer.recvfrom(65565)[0]
     ip_header = IP(raw_buffer[0:20])
 
+
+    #print in console
+    raw_buffer = sniffer.recvfrom(65565)[0]
+
+    # create an IP header from the first 20 bytes of the buffer
+    ip_header = IP(raw_buffer[0:20])
+
     # Os Detection
-    ttl = '0'
+
     if ip_header.ttl_number == 128:
         ttl = 'Windows'
     elif ip_header.ttl_number == 64:
         ttl = 'Linux'
     elif ip_header.ttl_number == 255:
         ttl = 'Cisco'
+    elif ip_header.ttl_number == 1:
+        ttl = 'Router'
+    elif ip_header.ttl_number == 2:
+        ttl = 'Router'
+    else:
+        ttl = 'Unknown'
 
-    packet.set("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
-    #print in console
-    raw_buffer = sniffer.recvfrom(65565)[0]
+    packetStr = ("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
+    packet.set(packetStr)
 
-    # create an IP header from the first 20 bytes of the buffer
-    ip_header = IP(raw_buffer[0:20])
 
     print "Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address,
                                             ip_header.ttl_number)
@@ -104,11 +125,8 @@ def capture_packet():
 
     #set packet gui
 
-
-    label = Label(root, text= packet.get())
-    label.pack()
-
-
+    #label = Label(root, text= packet.get())
+    #label.pack()
 
     #put in picture needs to be worked on
 
@@ -118,6 +136,7 @@ def capture_packet():
     #promiscuous mode off
     if os.name == "nt":
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)#
+    return packet.get()
 
 
 
@@ -133,7 +152,7 @@ def display():
 
 def map():
 
-#Place holder for the map
+# Place holder for the map
 
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
@@ -164,8 +183,28 @@ def map():
 
 #for runing capture packet a numner of times
 def packetrun():
-    for x in range(0, 10):
-        capture_packet()
+
+
+    packetNum = int(cE.get())
+    optBox = optVar.get()
+    scrollbar = Scrollbar(root)
+    scrollbar.pack(side=RIGHT, fill=Y)
+    packetList = Listbox(root, width=55, height=20, yscrollcommand=scrollbar.set)
+
+
+    if optBox == 'Packets':
+        for x in range(0, packetNum):
+            packetList.insert(END, capture_packet())
+
+    elif optBox == 'Time':
+        for x in range(0, packetNum):
+            t_end = time.time() + 60 * packetNum
+            while time.time() < t_end:
+                packetList.insert(END, capture_packet())
+    packetList.pack(side=LEFT, fill=BOTH, expand=True)
+
+    scrollbar.config(command=packetList.yview)
+
 
 # enter ip text box
 Label(root, text="IP").grid(row=0)
@@ -173,14 +212,30 @@ Label(root, text="IP").grid(row=0)
 # IP text box entry
 e = Entry(root)
 e.grid(row=0, column=1)
+e.insert(END, host)
 
-#Start button
-Button(root, text='Start', command=capture_packet).grid(row=3, column=0, sticky=W, pady=4)
+# Cap options text box
+Label(root, text="Options").grid(row=1)
 
-#Quit button
+# Cap Options for drop down
+choices = {'Packets', 'Time', 'Live'}
+optVar.set('Packets')  # set the default option
+
+# Cap entry
+cE = Entry(root)
+cE.grid(row=1, column=2)
+cE.insert(END, '1')
+
+popupMenu = OptionMenu(root, optVar, *choices)
+popupMenu.grid(row=1, column =1)
+
+# Start button
+Button(root, text='Start', command=packetrun).grid(row=3, column=0, sticky=W, pady=4)
+
+# Quit button
 Button(root, text='Quit', command=root.quit).grid(row=3, column=1, sticky=W, pady=4)
 
-#Map Button
+# Map Button
 Button(root, text='Map', command=map).grid(row=3, column=2, sticky=W, pady=4)
 
 root.mainloop()
