@@ -2,6 +2,7 @@ import socket
 import struct
 import textwrap
 import os
+import Tkinter as tk
 from Tkinter import *
 from ctypes import *
 from OpenGL.GLUT import *
@@ -22,6 +23,8 @@ name = 'Packet Map'
 
 # Set Var For Packet
 packet = StringVar()
+
+ttl = 'Windows'
 
 #img = ImageTk.PhotoImage(Image.open("windows.png"))
 #canvas = Canvas(root, width=50, height=50)
@@ -90,10 +93,6 @@ def capture_packet():
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
 
 
-    raw_buffer = sniffer.recvfrom(65565)[0]
-    ip_header = IP(raw_buffer[0:20])
-
-
     #print in console
     raw_buffer = sniffer.recvfrom(65565)[0]
 
@@ -115,35 +114,77 @@ def capture_packet():
     else:
         ttl = 'Unknown'
 
+
     packetStr = ("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
     packet.set(packetStr)
 
-
-    print "Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address,
-                                            ip_header.ttl_number)
-
-
-    #set packet gui
-
-    #label = Label(root, text= packet.get())
-    #label.pack()
-
-    #put in picture needs to be worked on
-
-    #canvas.pack()
-    #canvas.create_image(20, 15, anchor=NW, image=img)
+    print "Protocol: %s %s -> %s OS: %s Version: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address,
+                                            ip_header.ttl_number,ip_header)
 
     #promiscuous mode off
     if os.name == "nt":
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)#
     return packet.get()
 
+def getOS():
+    # IP var from text box
+    host = e.get()
+
+    # make a new socket
+    if os.name == 'nt':
+        socket_protocol = socket.IPPROTO_IP
+    else:
+        socket_protocol = socket.IPPROTO_ICMP
+
+    sniffer = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket_protocol)
+
+    sniffer.bind((host, 0))
+
+    # add ip header to sooket
+    sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+
+    # promiscuous mode on
+    if os.name == "nt":
+        sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+
+    # print in console
+    raw_buffer = sniffer.recvfrom(65565)[0]
+
+    # create an IP header from the first 20 bytes of the buffer
+    ip_header = IP(raw_buffer[0:20])
+
+    # Os Detection
+
+    if ip_header.ttl_number == 128:
+        ttl = 'Windows'
+    elif ip_header.ttl_number == 64:
+        ttl = 'Linux'
+    elif ip_header.ttl_number == 255:
+        ttl = 'Cisco'
+    elif ip_header.ttl_number == 1:
+        ttl = 'Router'
+    elif ip_header.ttl_number == 2:
+        ttl = 'Router'
+    else:
+        ttl = 'Unknown'
+
+    print "Protocol: %s %s -> %s OS: %s " % (
+    ip_header.protocol, ip_header.src_address, ip_header.dst_address,
+    ttl)
+
+    return ttl
+
 
 
 def display():
+
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
    glPushMatrix()
-   color = [1.0, 0., 0., 1.]
+   if ttl == getOS():
+    color = [1.0, 0., 0., 1.]
+   else:
+    color = [2.0, 2., 2., 2.]
+
    glMaterialfv(GL_FRONT, GL_DIFFUSE, color)
    glutSolidSphere(2, 20, 20)
    glPopMatrix()
@@ -196,14 +237,18 @@ def packetrun():
         for x in range(0, packetNum):
             packetList.insert(END, capture_packet())
 
+
+
     elif optBox == 'Time':
         for x in range(0, packetNum):
             t_end = time.time() + 60 * packetNum
             while time.time() < t_end:
                 packetList.insert(END, capture_packet())
-    packetList.pack(side=LEFT, fill=BOTH, expand=True)
 
+    Button(root, text='Map', command=map)
+    packetList.pack(side=LEFT, fill=BOTH, expand=True)
     scrollbar.config(command=packetList.yview)
+
 
 
 # enter ip text box
@@ -231,6 +276,7 @@ popupMenu.grid(row=1, column =1)
 
 # Start button
 Button(root, text='Start', command=packetrun).grid(row=3, column=0, sticky=W, pady=4)
+
 
 # Quit button
 Button(root, text='Quit', command=root.quit).grid(row=3, column=1, sticky=W, pady=4)
