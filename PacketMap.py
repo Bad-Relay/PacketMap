@@ -70,6 +70,13 @@ class IP(Structure):
         except:
             self.protocol = str(self.protocol_num)
 
+class packet():
+    def __init__(self, protocol, srcAddress, dstAddress, ttl):
+        self.protocol = protocol
+        self.srcAddress = srcAddress
+        self.dstAddress = dstAddress
+        self.ttl = ttl
+
 def capture_packet():
 
     #IP var from text box
@@ -114,73 +121,30 @@ def capture_packet():
     else:
         ttl = 'Unknown'
 
+    protocol = ip_header.protocol
 
-    packetStr = ("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
-    packet.set(packetStr)
+    srcAddress = ip_header.src_address
+
+    dstAddress = ip_header.dst_address
+
+  #  packetStr = ("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
+  #  packet.set(packetStr)
 
     print "Protocol: %s %s -> %s OS: %s Version: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address,
                                             ip_header.ttl_number,ip_header)
 
     #promiscuous mode off
     if os.name == "nt":
-        sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)#
-    return packet.get()
+        sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
 
-def getOS():
-    # IP var from text box
-    host = e.get()
-
-    # make a new socket
-    if os.name == 'nt':
-        socket_protocol = socket.IPPROTO_IP
-    else:
-        socket_protocol = socket.IPPROTO_ICMP
-
-    sniffer = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket_protocol)
-
-    sniffer.bind((host, 0))
-
-    # add ip header to sooket
-    sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-
-    # promiscuous mode on
-    if os.name == "nt":
-        sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
-
-    # print in console
-    raw_buffer = sniffer.recvfrom(65565)[0]
-
-    # create an IP header from the first 20 bytes of the buffer
-    ip_header = IP(raw_buffer[0:20])
-
-    # Os Detection
-
-    if ip_header.ttl_number == 128:
-        ttl = 'Windows'
-    elif ip_header.ttl_number == 64:
-        ttl = 'Linux'
-    elif ip_header.ttl_number == 255:
-        ttl = 'Cisco'
-    elif ip_header.ttl_number == 1:
-        ttl = 'Router'
-    elif ip_header.ttl_number == 2:
-        ttl = 'Router'
-    else:
-        ttl = 'Unknown'
-
-    print "Protocol: %s %s -> %s OS: %s " % (
-    ip_header.protocol, ip_header.src_address, ip_header.dst_address,
-    ttl)
-
-    return ttl
-
+    return packet(protocol,srcAddress,dstAddress,ttl)
 
 
 def display():
-
+   packetCapture = capture_packet()
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
    glPushMatrix()
-   if ttl == getOS():
+   if ttl == packetCapture.ttl:
     color = [1.0, 0., 0., 1.]
    else:
     color = [2.0, 2., 2., 2.]
@@ -224,8 +188,7 @@ def map():
 
 #for runing capture packet a numner of times
 def packetrun():
-
-
+    packetCapture = capture_packet()
     packetNum = int(cE.get())
     optBox = optVar.get()
     scrollbar = Scrollbar(root)
@@ -235,15 +198,18 @@ def packetrun():
 
     if optBox == 'Packets':
         for x in range(0, packetNum):
-            packetList.insert(END, capture_packet())
-
-
+            capture_packet()
+            packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
+                                                                                 packetCapture.ttl))
 
     elif optBox == 'Time':
         for x in range(0, packetNum):
             t_end = time.time() + 60 * packetNum
             while time.time() < t_end:
-                packetList.insert(END, capture_packet())
+                capture_packet()
+                packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (
+                packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
+                packetCapture.ttl))
 
     Button(root, text='Map', command=map)
     packetList.pack(side=LEFT, fill=BOTH, expand=True)
