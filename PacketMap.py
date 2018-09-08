@@ -8,11 +8,16 @@ from ctypes import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
+from OpenGL._bytes import *
 import time
+import pygeoip
 #from PIL import ImageTk,Image
 
+gi = pygeoip.GeoIP('GeoIP.dat')
 # GUI host
 root = Tk()
+
+menuStart = 1
 
 # Defult Ip
 host = socket.gethostbyname(socket.gethostname())
@@ -31,7 +36,7 @@ ttl = 'Windows'
 
 # Cap Drop down box
 
-optVar = StringVar(root)
+
 
 #Ip header table
 class IP(Structure):
@@ -80,7 +85,7 @@ class packet():
 def capture_packet():
 
     #IP var from text box
-    host = e.get()
+    #host = e.get()
 
     #make a new socket
     if os.name == 'nt':
@@ -141,16 +146,19 @@ def capture_packet():
 
 
 def display():
-   packetCapture = capture_packet()
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
    glPushMatrix()
-   if ttl == packetCapture.ttl:
-    color = [1.0, 0., 0., 1.]
-   else:
-    color = [2.0, 2., 2., 2.]
+   glutSolidTeapot(.5)
+   for x in range(0, 2):
+       packetCapture = capture_packet()
+       if ttl == packetCapture.ttl:
+           color = [1.0, 0., 0., 1.]
+       else:
+           color = [2.0, 2., 2., 2.]
+       glTranslatef(0., -1.5, 0.)
+       glMaterialfv(GL_FRONT, GL_DIFFUSE, color)
+       glutSolidSphere(.5, 20, 20)
 
-   glMaterialfv(GL_FRONT, GL_DIFFUSE, color)
-   glutSolidSphere(2, 20, 20)
    glPopMatrix()
    glutSwapBuffers()
    return
@@ -158,7 +166,6 @@ def display():
 def map():
 
 # Place holder for the map
-
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
     glutInitWindowSize(400, 400)
@@ -186,69 +193,129 @@ def map():
     glutMainLoop()
 
 
-#for runing capture packet a numner of times
-def packetrun():
-    packetCapture = capture_packet()
-    packetNum = int(cE.get())
-    optBox = optVar.get()
-    scrollbar = Scrollbar(root)
-    scrollbar.pack(side=RIGHT, fill=Y)
-    packetList = Listbox(root, width=55, height=20, yscrollcommand=scrollbar.set)
+class MainWindow(tk.Tk):
+    def __init__(self, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        container = tk.Frame(self)
+
+        container.pack(side="top", fill="both", expand=True)
+
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        self.frames = {}
+
+        for F in (mainMenu, packetMenu):
+            frame = F(container, self)
+
+            self.frames[F] = frame
+
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame(mainMenu)
+
+    def show_frame(self, cont):
+        frame = self.frames[cont]
+        frame.tkraise()
 
 
-    if optBox == 'Packets':
-        for x in range(0, packetNum):
-            capture_packet()
-            packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
-                                                                                 packetCapture.ttl))
+class mainMenu(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        optVar = StringVar(self)
+        # enter ip text box
+        tk.Label(self, text="IP").grid(row=0)
 
-    elif optBox == 'Time':
-        for x in range(0, packetNum):
-            t_end = time.time() + 60 * packetNum
-            while time.time() < t_end:
-                capture_packet()
-                packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (
+        # IP text box entry
+        e = tk.Entry(self)
+        e.grid(row=0, column=1)
+        e.insert(END, host)
+
+        # Cap options text box
+        tk.Label(self, text="Options").grid(row=1)
+
+        # Cap Options for drop down
+        choices = {'Packets', 'Time', 'Live'}
+        optVar.set('Packets')  # set the default option
+
+        # Cap entry
+        cE = tk.Entry(self)
+        cE.grid(row=1, column=2)
+        cE.insert(END, '1')
+
+        popupMenu = tk.OptionMenu(self, optVar, *choices)
+        popupMenu.grid(row=1, column =1)
+
+        # Start button
+        startBut = tk.Button(self, text='Start', command=lambda: controller.show_frame(packetMenu))
+
+        startBut.grid(row=3, column=1, sticky=W, pady=4)
+
+        # Quit button
+        #quitBut = tk.Button(self, text='Quit', command=root.quit)
+        #quitBut.grid(row=3, column=3, sticky=W, pady=4)
+
+        # Map Button
+        mapBut = tk.Button(self, text='Map', command=map)
+        mapBut.grid(row=3, column=2, sticky=W, pady=4)
+
+
+class packetMenu(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        #capture_packet()
+        #tk.Label(self, text="Packet").grid(row=0)
+
+        # for runing capture packet a numner of times
+
+        # popupMenu.destroy()
+        # mapBut.destroy()
+
+        packetCapture = capture_packet()
+        #packetNum = int(cE.get())
+
+        packetNum = 1
+        #optBox = optVar.get()
+        optBox ='Packets'
+        scrollbar = tk.Scrollbar(self)
+        scrollbar.pack(side=RIGHT, fill=Y)
+        scrollbar.grid(row=1, column=1)
+        packetList = tk.Listbox(self, width=80, height=20, yscrollcommand=scrollbar.set)
+        packetList.grid(row=1, column=1)
+        # geoIp = geolite2.lookup('17.0.0.1')
+
+        if optBox == 'Packets':
+            for x in range(0, packetNum):
+
+
+                # geoIp.timezone
+                packetList.insert(END, "Protocol: %s %s -> %s OS: %s Location: %s" % (
                 packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
-                packetCapture.ttl))
-
-    Button(root, text='Map', command=map)
-    packetList.pack(side=LEFT, fill=BOTH, expand=True)
-    scrollbar.config(command=packetList.yview)
+                packetCapture.ttl, gi.country_name_by_addr(packetCapture.dstAddress)))
 
 
 
-# enter ip text box
-Label(root, text="IP").grid(row=0)
 
-# IP text box entry
-e = Entry(root)
-e.grid(row=0, column=1)
-e.insert(END, host)
+        elif optBox == 'Time':
+            for x in range(0, packetNum):
+                t_end = time.time() + 60 * packetNum
+                while time.time() < t_end:
+                    capture_packet()
+                    tk.packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (
+                        packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
+                        packetCapture.ttl))
 
-# Cap options text box
-Label(root, text="Options").grid(row=1)
+            packetList.pack(side=LEFT, fill=BOTH, expand=True)
+            #Button(self, text='Quit', command=root.quit, width=55, height=20)
+            scrollbar.config(command=packetList.yview)
 
-# Cap Options for drop down
-choices = {'Packets', 'Time', 'Live'}
-optVar.set('Packets')  # set the default option
+        tk.Label(self, text="Sort").grid(row=0, column=0, sticky=W, pady=4)
+        startOverBut = tk.Button(self, text='Start Over', command=lambda: controller.show_frame(mainMenu))
+        startOverBut.grid(row=3, column=1, sticky=W, pady=4)
+        sortChoices = {'Ip Source', 'IP Dest', 'Location'}
 
-# Cap entry
-cE = Entry(root)
-cE.grid(row=1, column=2)
-cE.insert(END, '1')
+        sort = tk.OptionMenu(self, 'Ip Source', *sortChoices)
+        sort.grid(row=0, column=1, sticky=W, pady=4)
 
-popupMenu = OptionMenu(root, optVar, *choices)
-popupMenu.grid(row=1, column =1)
-
-# Start button
-Button(root, text='Start', command=packetrun).grid(row=3, column=0, sticky=W, pady=4)
-
-
-# Quit button
-Button(root, text='Quit', command=root.quit).grid(row=3, column=1, sticky=W, pady=4)
-
-# Map Button
-Button(root, text='Map', command=map).grid(row=3, column=2, sticky=W, pady=4)
-
-root.mainloop()
-
+app = MainWindow()
+app.mainloop()
