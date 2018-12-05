@@ -36,6 +36,10 @@ ttl = 'Windows'
 
 # Cap Drop down box
 
+#start packet capture var
+start = 1
+
+
 
 
 #Ip header table
@@ -83,6 +87,7 @@ class packet():
         self.ttl = ttl
 
 def capture_packet():
+    start = 1
 
     #IP var from text box
     #host = e.get()
@@ -163,6 +168,7 @@ def display():
    glutSwapBuffers()
    return
 
+
 def map():
 
 # Place holder for the map
@@ -192,10 +198,11 @@ def map():
     glPushMatrix()
     glutMainLoop()
 
-
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
+
+
         container = tk.Frame(self)
 
         container.pack(side="top", fill="both", expand=True)
@@ -226,11 +233,6 @@ class mainMenu(tk.Frame):
         # enter ip text box
         tk.Label(self, text="IP").grid(row=0)
 
-        # IP text box entry
-        e = tk.Entry(self)
-        e.grid(row=0, column=1)
-        e.insert(END, host)
-
         # Cap options text box
         tk.Label(self, text="Options").grid(row=1)
 
@@ -251,7 +253,6 @@ class mainMenu(tk.Frame):
 
         startBut.grid(row=3, column=1, sticky=W, pady=4)
 
-        # Quit button
         #quitBut = tk.Button(self, text='Quit', command=root.quit)
         #quitBut.grid(row=3, column=3, sticky=W, pady=4)
 
@@ -271,51 +272,67 @@ class packetMenu(tk.Frame):
         # popupMenu.destroy()
         # mapBut.destroy()
 
-        packetCapture = capture_packet()
+        #packetCapture = capture_packet()
         #packetNum = int(cE.get())
 
-        packetNum = 1
+
         #optBox = optVar.get()
-        optBox ='Packets'
+
+        tk.Label(self, text="IP").grid(row=0)
+
+        # IP text box entry
+        e = tk.Entry(self)
+        e.grid(row=0, column=1, sticky=W, pady=4)
+        e.insert(END, host)
+
+
+
         scrollbar = tk.Scrollbar(self)
         scrollbar.pack(side=RIGHT, fill=Y)
-        scrollbar.grid(row=1, column=1)
+        scrollbar.grid(row=2, column=1)
         packetList = tk.Listbox(self, width=80, height=20, yscrollcommand=scrollbar.set)
-        packetList.grid(row=1, column=1)
+        packetList.grid(row=2, column=1)
         # geoIp = geolite2.lookup('17.0.0.1')
 
-        if optBox == 'Packets':
-            for x in range(0, packetNum):
+        tk.Label(self, text="Sort").grid(row=1, column=0, sticky=W, pady=4)
+        startOverBut = tk.Button(self, text='Start Over', command=lambda: controller.show_frame(mainMenu))
+        startOverBut.grid(row=3, column=2, sticky=W, pady=4)
+        startBox = tk.Button(self, text='Start Box', command=lambda: packetBox(packetList, scrollbar))
+        startBox.grid(row=3, column=1, sticky=W, pady=4)
+        sortChoices = {'Ip Source', 'IP Dest', 'Location'}
+        sort = tk.OptionMenu(self, 'Ip Source', *sortChoices)
+        sort.grid(row=1, column=1, sticky=W, pady=4)
+        packetBox(packetList,scrollbar)
+        packetBox(packetList, scrollbar)
 
 
-                # geoIp.timezone
-                packetList.insert(END, "Protocol: %s %s -> %s OS: %s Location: %s" % (
+def packetBox(packetList,scrollbar):
+    packetNum = 1
+    optBox = 'Packets'
+    if optBox == 'Packets':
+        packetCapture = capture_packet()
+        for x in range(0, packetNum):
+            #geoIp.timezone
+            packetList.insert(END, "Protocol: %s %s -> %s OS: %s Location: %s" % (
+            packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
+            packetCapture.ttl, gi.country_name_by_addr(packetCapture.dstAddress)))
+
+    elif optBox == 'Time':
+        packetCapture = capture_packet()
+        for x in range(0, packetNum):
+            t_end = time.time() + 60 * packetNum
+            while time.time() < t_end:
+                capture_packet()
+                tk.packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (
                 packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
-                packetCapture.ttl, gi.country_name_by_addr(packetCapture.dstAddress)))
-
-
-
-
-        elif optBox == 'Time':
-            for x in range(0, packetNum):
-                t_end = time.time() + 60 * packetNum
-                while time.time() < t_end:
-                    capture_packet()
-                    tk.packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (
-                        packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
-                        packetCapture.ttl))
+                    packetCapture.ttl))
 
             packetList.pack(side=LEFT, fill=BOTH, expand=True)
             #Button(self, text='Quit', command=root.quit, width=55, height=20)
             scrollbar.config(command=packetList.yview)
 
-        tk.Label(self, text="Sort").grid(row=0, column=0, sticky=W, pady=4)
-        startOverBut = tk.Button(self, text='Start Over', command=lambda: controller.show_frame(mainMenu))
-        startOverBut.grid(row=3, column=1, sticky=W, pady=4)
-        sortChoices = {'Ip Source', 'IP Dest', 'Location'}
 
-        sort = tk.OptionMenu(self, 'Ip Source', *sortChoices)
-        sort.grid(row=0, column=1, sticky=W, pady=4)
+
 
 app = MainWindow()
 app.mainloop()
