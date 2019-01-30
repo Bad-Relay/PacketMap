@@ -11,7 +11,8 @@ from OpenGL.GL import *
 from OpenGL._bytes import *
 import time
 import pygeoip
-#from PIL import ImageTk,Image
+
+# from PIL import ImageTk,Image
 
 gi = pygeoip.GeoIP('GeoIP.dat')
 # GUI host
@@ -31,18 +32,16 @@ packet = StringVar()
 
 ttl = 'Windows'
 
-#img = ImageTk.PhotoImage(Image.open("windows.png"))
-#canvas = Canvas(root, width=50, height=50)
+# img = ImageTk.PhotoImage(Image.open("windows.png"))
+# canvas = Canvas(root, width=50, height=50)
 
 # Cap Drop down box
 
-#start packet capture var
+# start packet capture var
 start = 1
 
 
-
-
-#Ip header table
+# Ip header table
 class IP(Structure):
     _fields_ = [
         ("ihl", c_ubyte, 4),
@@ -72,12 +71,12 @@ class IP(Structure):
         self.src_address = socket.inet_ntoa(struct.pack("<L", self.src))
         self.dst_address = socket.inet_ntoa(struct.pack("<L", self.dst))
 
-
         # human readable protocol
         try:
             self.protocol = self.protocol_map[self.protocol_num]
         except:
             self.protocol = str(self.protocol_num)
+
 
 class packet():
     def __init__(self, protocol, srcAddress, dstAddress, ttl):
@@ -86,13 +85,14 @@ class packet():
         self.dstAddress = dstAddress
         self.ttl = ttl
 
+
 def capture_packet():
     start = 1
 
-    #IP var from text box
-    #host = e.get()
+    # IP var from text box
+    # host = e.get()
 
-    #make a new socket
+    # make a new socket
     if os.name == 'nt':
         socket_protocol = socket.IPPROTO_IP
     else:
@@ -102,15 +102,14 @@ def capture_packet():
 
     sniffer.bind((host, 0))
 
-    #add ip header to sooket
-    sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL,1)
+    # add ip header to sooket
+    sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
 
-    #promiscuous mode on
+    # promiscuous mode on
     if os.name == "nt":
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
 
-
-    #print in console
+    # print in console
     raw_buffer = sniffer.recvfrom(65565)[0]
 
     # create an IP header from the first 20 bytes of the buffer
@@ -137,41 +136,46 @@ def capture_packet():
 
     dstAddress = ip_header.dst_address
 
-  #  packetStr = ("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
-  #  packet.set(packetStr)
+    #  packetStr = ("Protocol: %s %s -> %s OS: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address, ttl))
+    #  packet.set(packetStr)
 
-    print "Protocol: %s %s -> %s OS: %s Version: %s" % (ip_header.protocol, ip_header.src_address, ip_header.dst_address,
-                                            ip_header.ttl_number,ip_header)
+    print "Protocol: %s %s -> %s OS: %s Version: %s" % (
+    ip_header.protocol, ip_header.src_address, ip_header.dst_address,
+    ip_header.ttl_number, ip_header)
 
-    #promiscuous mode off
+    # promiscuous mode off
     if os.name == "nt":
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
 
-    return packet(protocol,srcAddress,dstAddress,ttl)
+    return packet(protocol, srcAddress, dstAddress, ttl)
 
 
 def display():
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-   glPushMatrix()
-   glutSolidTeapot(.5)
-   for x in range(0, 2):
-       packetCapture = capture_packet()
-       if ttl == packetCapture.ttl:
-           color = [1.0, 0., 0., 1.]
-       else:
-           color = [2.0, 2., 2., 2.]
-       glTranslatef(0., -1.5, 0.)
-       glMaterialfv(GL_FRONT, GL_DIFFUSE, color)
-       glutSolidSphere(.5, 20, 20)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glPushMatrix()
+    glutSolidTeapot(.5)
+    for x in range(0, 2):
+        packetCapture = capture_packet()
+        if ttl == packetCapture.ttl:
+            color = [1.0, 0., 0., 1.]
+        else:
+            color = [2.0, 2., 2., 2.]
+        glTranslatef(0., -1.5, 0.)
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, color)
+        glutSolidSphere(.5, 20, 20)
 
-   glPopMatrix()
-   glutSwapBuffers()
-   return
+    glPopMatrix()
+    glutSwapBuffers()
+    return
 
 
-def map():
+class TestMap:
+    def __init__(self, source_ip, source_port, dest_ip, dest_port, size):
+        self.sip = source_ip
 
-# Place holder for the map
+
+def map(self):
+    # Place holder for the map
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
     glutInitWindowSize(400, 400)
@@ -198,10 +202,10 @@ def map():
     glPushMatrix()
     glutMainLoop()
 
+
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
-
 
         container = tk.Frame(self)
 
@@ -231,7 +235,7 @@ class mainMenu(tk.Frame):
         tk.Frame.__init__(self, parent)
         optVar = StringVar(self)
         # enter ip text box
-        tk.Label(self, text="IP").grid(row=0)
+        tk.Label(self, text="Main Menu").grid(column=2)
 
         # Cap options text box
         tk.Label(self, text="Options").grid(row=1)
@@ -246,15 +250,15 @@ class mainMenu(tk.Frame):
         cE.insert(END, '1')
 
         popupMenu = tk.OptionMenu(self, optVar, *choices)
-        popupMenu.grid(row=1, column =1)
+        popupMenu.grid(row=1, column=1)
 
         # Start button
         startBut = tk.Button(self, text='Start', command=lambda: controller.show_frame(packetMenu))
 
         startBut.grid(row=3, column=1, sticky=W, pady=4)
 
-        #quitBut = tk.Button(self, text='Quit', command=root.quit)
-        #quitBut.grid(row=3, column=3, sticky=W, pady=4)
+        # quitBut = tk.Button(self, text='Quit', command=root.quit)
+        # quitBut.grid(row=3, column=3, sticky=W, pady=4)
 
         # Map Button
         mapBut = tk.Button(self, text='Map', command=map)
@@ -264,19 +268,19 @@ class mainMenu(tk.Frame):
 class packetMenu(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        #capture_packet()
-        #tk.Label(self, text="Packet").grid(row=0)
+        # capture_packet()
+        # tk.Label(self, text="Packet").grid(row=0)
 
         # for runing capture packet a numner of times
 
         # popupMenu.destroy()
         # mapBut.destroy()
 
-        #packetCapture = capture_packet()
-        #packetNum = int(cE.get())
+        # packetCapture = capture_packet()
+        # packetNum = int(cE.get())
 
 
-        #optBox = optVar.get()
+        # optBox = optVar.get()
 
         tk.Label(self, text="IP").grid(row=0)
 
@@ -284,8 +288,6 @@ class packetMenu(tk.Frame):
         e = tk.Entry(self)
         e.grid(row=0, column=1, sticky=W, pady=4)
         e.insert(END, host)
-
-
 
         scrollbar = tk.Scrollbar(self)
         scrollbar.pack(side=RIGHT, fill=Y)
@@ -302,20 +304,20 @@ class packetMenu(tk.Frame):
         sortChoices = {'Ip Source', 'IP Dest', 'Location'}
         sort = tk.OptionMenu(self, 'Ip Source', *sortChoices)
         sort.grid(row=1, column=1, sticky=W, pady=4)
-        packetBox(packetList,scrollbar)
+        packetBox(packetList, scrollbar)
         packetBox(packetList, scrollbar)
 
 
-def packetBox(packetList,scrollbar):
+def packetBox(packetList, scrollbar):
     packetNum = 1
     optBox = 'Packets'
     if optBox == 'Packets':
         packetCapture = capture_packet()
         for x in range(0, packetNum):
-            #geoIp.timezone
+            # geoIp.timezone
             packetList.insert(END, "Protocol: %s %s -> %s OS: %s Location: %s" % (
-            packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
-            packetCapture.ttl, gi.country_name_by_addr(packetCapture.dstAddress)))
+                packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
+                packetCapture.ttl, gi.country_name_by_addr(packetCapture.dstAddress)))
 
     elif optBox == 'Time':
         packetCapture = capture_packet()
@@ -324,14 +326,12 @@ def packetBox(packetList,scrollbar):
             while time.time() < t_end:
                 capture_packet()
                 tk.packetList.insert(END, "Protocol: %s %s -> %s OS: %s " % (
-                packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
+                    packetCapture.protocol, packetCapture.srcAddress, packetCapture.dstAddress,
                     packetCapture.ttl))
 
             packetList.pack(side=LEFT, fill=BOTH, expand=True)
-            #Button(self, text='Quit', command=root.quit, width=55, height=20)
+            # Button(self, text='Quit', command=root.quit, width=55, height=20)
             scrollbar.config(command=packetList.yview)
-
-
 
 
 app = MainWindow()
