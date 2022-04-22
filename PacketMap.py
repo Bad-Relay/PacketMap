@@ -14,6 +14,8 @@ import pygeoip
 
 # from PIL import ImageTk,Image
 
+# This code was largely peer coded in the same room with no commits, so I'm committing this comment to get on the repo
+
 gi = pygeoip.GeoIP('GeoIP.dat')
 # GUI host
 root = Tk()
